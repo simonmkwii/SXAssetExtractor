@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text;
 
@@ -13,6 +13,8 @@ namespace SXAssetExtractor
             internal int Size;
             internal int TexWidth;
             internal int TexHeight;
+            internal bool HasAlpha;
+            internal byte[] Padding;
         }
 
         private static string TrimB(byte[] In)
@@ -42,16 +44,17 @@ namespace SXAssetExtractor
                     Offset = Rd.ReadInt32(),
                     Size = Rd.ReadInt32(),
                     TexWidth = Rd.ReadInt32(),
-                    TexHeight = Rd.ReadInt32()
+                    TexHeight = Rd.ReadInt32(),
+                    HasAlpha = Rd.ReadBoolean(),
+                    Padding = Rd.ReadBytes(7)
                 };
 
-                FO.Position += 8;
                 var CurPos = FO.Position;
 
                 var Name = TrimB(Files[i].Filename);
                 var Resolution = $"{Files[i].TexWidth}x{Files[i].TexHeight}";
 
-                Console.WriteLine($"Extracting {Name}.BIN ({Resolution})...");
+                Console.WriteLine($"Extracting {Name}.BIN\t(Size: {Resolution}) (Alpha: {(Files[i].HasAlpha ? "Yes" : "No")})");
 
                 var Out = File.OpenWrite($"GFX/{Name}_{Resolution}.BIN");
                 var Wrt = new BinaryWriter(Out);
