@@ -6,6 +6,13 @@ namespace SXAssetExtractor
 {
     internal class Program
     {
+        internal struct Header
+        {
+            internal byte[] Magic;
+            internal int NumOfFiles;
+            internal long Padding;
+        }
+
         internal struct FileInfo
         {
             internal byte[] Filename;
@@ -27,26 +34,30 @@ namespace SXAssetExtractor
             var FO = File.OpenRead(args[0]);
             var Rd = new BinaryReader(FO);
 
-            var Magic = Rd.ReadBytes(4);
-            var NumOfFiles = Rd.ReadInt32();
+            var Hdr = new Header
+            {
+                Magic      = Rd.ReadBytes(4),
+                NumOfFiles = Rd.ReadInt32(),
+                Padding    = Rd.ReadInt64()
+            };
 
-            FO.Position += 8;
+            var FolNm = TrimB(Hdr.Magic);
 
-            var Files = new FileInfo[NumOfFiles];
+            var Files = new FileInfo[Hdr.NumOfFiles];
 
-            Directory.CreateDirectory(TrimB(Magic));
+            Directory.CreateDirectory(FolNm);
 
-            for (int i = 0; i < NumOfFiles; i++)
+            for (int i = 0; i < Hdr.NumOfFiles; i++)
             {
                 Files[i] = new FileInfo
                 {
-                    Filename = Rd.ReadBytes(8),
-                    Offset = Rd.ReadInt32(),
-                    Size = Rd.ReadInt32(),
-                    TexWidth = Rd.ReadInt32(),
+                    Filename  = Rd.ReadBytes(8),
+                    Offset    = Rd.ReadInt32(),
+                    Size      = Rd.ReadInt32(),
+                    TexWidth  = Rd.ReadInt32(),
                     TexHeight = Rd.ReadInt32(),
-                    HasAlpha = Rd.ReadBoolean(),
-                    Padding = Rd.ReadBytes(7)
+                    HasAlpha  = Rd.ReadBoolean(),
+                    Padding   = Rd.ReadBytes(7)
                 };
 
                 var CurPos = FO.Position;
@@ -54,9 +65,14 @@ namespace SXAssetExtractor
                 var Name = TrimB(Files[i].Filename);
                 var Resolution = $"{Files[i].TexWidth}x{Files[i].TexHeight}";
 
-                Console.WriteLine($"Extracting {Name}.BIN\t(Size: {Resolution}) (Alpha: {(Files[i].HasAlpha ? "Yes" : "No")})");
+                Console.WriteLine
+                (
+                    $"Extracting {Name}.BIN\t" +
+                    $"(Size: {Resolution}) " +
+                    $"(Alpha: {(Files[i].HasAlpha ? "Yes" : "No")})"
+                );
 
-                var Out = File.OpenWrite($"GFX/{Name}_{Resolution}.BIN");
+                var Out = File.OpenWrite($"{FolNm}/{Name}_{Resolution}.BIN");
                 var Wrt = new BinaryWriter(Out);
 
                 FO.Position = Files[i].Offset;
